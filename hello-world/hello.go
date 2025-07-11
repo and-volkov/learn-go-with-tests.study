@@ -1,4 +1,5 @@
-package main
+// Package hello
+package hello
 
 import "fmt"
 
