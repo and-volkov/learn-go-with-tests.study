@@ -33,10 +33,9 @@ func SumAllTails(numbersToSum ...[]int) []int {
 }
 
 func SumStrings(stringsToSum ...[]string) string {
-	var result string
+	var result []string
 	for _, string := range stringsToSum {
-		result += strings.Join(string, " ")
-		result += " "
+		result = append(result, string...)
 	}
-	return strings.Trim(result, " ")
+	return strings.Join(result, " ")
 }
