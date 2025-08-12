@@ -3,49 +3,113 @@ package clockface
 import (
 	"bytes"
 	"encoding/xml"
+	"slices"
 	"testing"
 	"time"
 )
 
-func TestSecondHandAtMidnight(t *testing.T) {
-	tm := time.Date(1337, time.January, 1, 0, 0, 0, 0, time.UTC)
+type SVG struct {
+	XMLName xml.Name `xml:"svg"`
+	Xmlns   string   `xml:"xmlns,attr"`
+	Width   string   `xml:"width,attr"`
+	Height  string   `xml:"height,attr"`
+	ViewBox string   `xml:"viewBox,attr"`
+	Version string   `xml:"version,attr"`
+	Circle  Circle   `xml:"circle"`
+	Line    []Line   `xml:"line"`
+}
 
-	want := Point{X: 150, Y: 150 - 90}
-	got := SecondHand(tm)
+type Circle struct {
+	Cx float64 `xml:"cx,attr"`
+	Cy float64 `xml:"cy,attr"`
+	R  float64 `xml:"r,attr"`
+}
 
-	if got != want {
-		t.Errorf("Got %v; want %v", got, want)
+type Line struct {
+	X1 float64 `xml:"x1,attr"`
+	Y1 float64 `xml:"y1,attr"`
+	X2 float64 `xml:"x2,attr"`
+	Y2 float64 `xml:"y2,attr"`
+}
+
+func TestSWGWriterSecondHand(t *testing.T) {
+	cases := []struct {
+		time time.Time
+		line Line
+	}{
+		{
+			simpleTime(0, 0, 0),
+			Line{150, 150, 150, 60},
+		},
+		{
+			simpleTime(0, 0, 30),
+			Line{150, 150, 150, 240},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(testName(c.time), func(t *testing.T) {
+			b := bytes.Buffer{}
+			SVGWriter(&b, c.time)
+
+			svg := SVG{}
+			xml.Unmarshal(b.Bytes(), &svg)
+
+			if !slices.Contains(svg.Line, c.line) {
+				t.Errorf("Expected to find the second hand line %+v, in the SVG lines %+v", c.line, svg.Line)
+			}
+		})
 	}
 }
 
-func TestSecondHandAt30Seconds(t *testing.T) {
-	tm := time.Date(1337, time.January, 1, 0, 0, 30, 0, time.UTC)
+func TestSWGWriterMinuteHand(t *testing.T) {
+	cases := []struct {
+		time time.Time
+		line Line
+	}{
+		{
+			simpleTime(0, 0, 0),
+			Line{150, 150, 150, 70},
+		},
+	}
 
-	want := Point{X: 150, Y: 150 + 90}
-	got := SecondHand(tm)
+	for _, c := range cases {
+		t.Run(testName(c.time), func(t *testing.T) {
+			b := bytes.Buffer{}
+			SVGWriter(&b, c.time)
 
-	if got != want {
-		t.Errorf("Got %v; want %v", got, want)
+			svg := SVG{}
+			xml.Unmarshal(b.Bytes(), &svg)
+
+			if !slices.Contains(svg.Line, c.line) {
+				t.Errorf("Expected to find the minute hand line %+v, in the SVG lines %+v", c.line, svg.Line)
+			}
+		})
 	}
 }
 
-func TestSVGWriterAtMidnight(t *testing.T) {
-	tm := time.Date(1337, time.January, 1, 0, 0, 0, 0, time.UTC)
-
-	b := bytes.Buffer{}
-	SVGWriter(&b, tm)
-
-	svg := Svg{}
-	xml.Unmarshal(b.Bytes(), &svg)
-
-	x2 := "150.000"
-	y2 := "60.000"
-
-	for _, line := range svg.Line {
-		if line.X2 == x2 && line.Y2 == y2 {
-			return
-		}
+func TestSVGWriterHourHand(t *testing.T) {
+	cases := []struct {
+		time time.Time
+		line Line
+	}{
+		{
+			simpleTime(6, 0, 0),
+			Line{150, 150, 150, 200},
+		},
 	}
 
-	t.Errorf("Expected to find the second hand with x2 of %+v and y2 of %+v, in the SVG output %v", x2, y2, b.String())
+	for _, c := range cases {
+		t.Run(testName(c.time), func(t *testing.T) {
+			b := bytes.Buffer{}
+			SVGWriter(&b, c.time)
+
+			svg := SVG{}
+			xml.Unmarshal(b.Bytes(), &svg)
+
+			if !slices.Contains(svg.Line, c.line) {
+				t.Errorf("Expected to find the hour hand line %+v, in the SVG lines %+v", c.line, svg.Line)
+			}
+		})
+	}
 }
